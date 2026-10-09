@@ -1,0 +1,100 @@
+@import "tailwindcss";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/dm-sans/400.css";
+@import "@fontsource/dm-sans/500.css";
+@import "@fontsource/dm-sans/600.css";
+@import "@fontsource/dm-serif-display/400.css";
+@import "@fontsource/bricolage-grotesque/600.css";
+@import "@fontsource/roboto-mono/700.css";
+
+@theme {
+  --color-canvas: #040404;
+  --color-surface: #1a1b2a;
+  --color-line: #252640;
+  --color-outline: #404040;
+  --color-lilac: #e3b4ff;
+  --color-lavender: #c5b0fc;
+  --color-ink: #f0f4ff;
+  --color-muted: #999999;
+  --font-sans: "Inter", sans-serif;
+  --font-display: "Bricolage Grotesque", sans-serif;
+  --font-portfolio: "DM Serif Display", serif;
+  --font-body: "DM Sans", sans-serif;
+  --font-mono: "Roboto Mono", monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled),
+select {
+  cursor: pointer;
+}
+::selection {
+  background: #e3b4ff;
+  color: #160a40;
+}
+@layer base {
+  :where(:focus-visible) {
+    outline: 2px solid var(--color-lilac);
+    outline-offset: 4px;
+  }
+}
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 50px #1a1b2a inset;
+  -webkit-text-fill-color: #f0f4ff;
+}
+.onboarding-background {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.onboarding-art {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 6px);
+  width: 884px;
+  height: 1440px;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+.onboarding-art img {
+  position: absolute;
+  top: -26.47%;
+  left: -61.21%;
+  width: 244.02%;
+  height: 168.74%;
+  max-width: none;
+}
+@media (max-width: 640px) {
+  .onboarding-art {
+    transform: translate(-50%, -50%) rotate(90deg) scale(0.75);
+  }
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: url("/figma/calendar.svg") center / 15px 15px no-repeat;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+@theme {
+  --color-workspace: #09090e;
+  --color-panel: #131421;
+  --color-subtle: #9aa0b5;
+  --color-positive: #3fd68c;
+}
