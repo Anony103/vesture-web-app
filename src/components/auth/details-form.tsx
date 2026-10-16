@@ -88,7 +88,6 @@ export function DetailsForm() {
         gender: profile.gender,
         dateOfBirth: profile.dateOfBirth,
         stateOfOrigin: profile.stateOfOrigin,
-        homeAddress: profile.address.trim(),
         phoneNumber: profile.phone.trim(),
         device: "web",
         channel: "web",
@@ -219,14 +218,6 @@ export function DetailsForm() {
           options={states}
           required
           {...field("stateOfOrigin")}
-        />
-        <Input
-          label="Home Address"
-          name="address"
-          placeholder="Enter Home Address"
-          autoComplete="street-address"
-          required
-          {...field("address")}
         />
         <Input
           label="Phone Number"

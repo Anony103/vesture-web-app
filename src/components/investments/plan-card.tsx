@@ -3,6 +3,8 @@ import { currency, type DemoPlan } from "@/lib/investments";
 import { LinkButton } from "@/components/ui/button";
 function planStatus(plan: DemoPlan) {
   if (plan.awaitingFunding) return { label: "Awaiting funding", tone: "text-amber-300 bg-amber-300/10" };
+  if (plan.settingUp) return { label: plan.settingUp, tone: "text-amber-300 bg-amber-300/10" };
+  if (plan.closed) return { label: "Closed", tone: "text-subtle bg-white/10" };
   if (plan.bnpl?.completed) return { label: "Completed", tone: "text-subtle bg-white/10" };
   return { label: "Active", tone: "text-positive bg-positive/12" };
 }

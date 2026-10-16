@@ -62,7 +62,6 @@ export function CreatePasswordForm() {
         gender: profile.gender,
         dateOfBirth: profile.dateOfBirth,
         stateOfOrigin: profile.stateOfOrigin,
-        homeAddress: profile.address.trim(),
         ...(isPublicSector
           ? { ippisNo: ippisNo.trim(), organization }
           : {}),

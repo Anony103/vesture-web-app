@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   SAVINGS_TYPE_TO_PRODUCT,
+  productDisplayText,
   type DemoPlan,
   type DemoTransaction,
 } from "@/lib/investments";
@@ -44,6 +45,15 @@ function isAwaitingFunding(dto: UserProduct) {
   );
 }
 
+// FUNDING_GL: paid for, the money is being moved to the bank. GL_CREDITED: moved, the deposit is being booked.
+// Only ACTIVE means the deposit is booked.
+function settingUpLabel(dto: UserProduct) {
+  const status = dto.status.trim().toLowerCase();
+  if (status === "funding_gl") return "Funding in progress";
+  if (status === "gl_credited") return "Setting up your deposit";
+  return undefined;
+}
+
 function mapProduct(dto: UserProduct): DemoPlan {
   const productId = SAVINGS_TYPE_TO_PRODUCT[dto.savingsType];
   const goal = dto.name ?? "Investment";
@@ -73,6 +83,12 @@ function mapProduct(dto: UserProduct): DemoPlan {
     frequency: dto.frequency ? toTitleCase(dto.frequency) : "Daily",
     itemName: goal,
     awaitingFunding: awaiting,
+    settingUp: settingUpLabel(dto),
+    closed: dto.status.trim().toLowerCase() === "closed",
+    partFunded:
+      dto.savingsType === "SMART_LOCK" &&
+      dto.status.trim().toLowerCase() === "pending_funding" &&
+      (dto.currentBalance ?? 0) > 0,
     fundingAmount: dto.amount ?? 0,
     targetAmount: dto.amount ?? 0,
     maturityDate: dto.completionDate,
@@ -124,7 +140,7 @@ function mapTransaction(
   const isWithdrawal = (tx.transactionType ?? "").toLowerCase() === "debit";
   return {
     id: tx.id,
-    title: tx.transactionReason || (isWithdrawal ? "Withdrawal" : "Deposit"),
+    title: productDisplayText(tx.transactionReason || (isWithdrawal ? "Withdrawal" : "Deposit")),
     date: tx.created_on,
     amount: tx.amount,
     productId: savingsType ? SAVINGS_TYPE_TO_PRODUCT[savingsType] : "smallvest",

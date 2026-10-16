@@ -92,7 +92,7 @@ export type StartSignupPayload = {
   gender: string;
   dateOfBirth: string;
   stateOfOrigin: string;
-  homeAddress: string;
+  homeAddress?: string; // no longer asked at sign-up
   phoneNumber: string;
   device: string;
   channel: string;
@@ -347,6 +347,22 @@ export type UserProduct = {
   created_on: string;
 };
 
+// Something still waiting for its bank transfer. While there is, the backend refuses to start a new
+// investment, so the create screens send the customer here to finish (or wait out) the open one.
+export type PendingFundingItem = {
+  planId: string;
+  savingsType: "SAVE_SMALL_SMALL" | "TARGET_SAVINGS" | "SMART_LOCK" | string;
+  planName: string | null;
+  amount: number;
+  // Bank-transfer requests carry a reference we can poll; a Smart Lock has none and is polled by its id.
+  referenceCode: string | null;
+  expiresAt: string;
+};
+
+export function getPendingFunding(token: string) {
+  return request<PendingFundingItem[]>("/api/savings/pending-funding", { token });
+}
+
 export function getUserProducts(token: string) {
   return request<UserProduct[]>("/api/savings/get-user-products", { token });
 }
@@ -546,15 +562,13 @@ export function createPendingDeposit(
 // request() rejects) = still waiting for the transfer, 400 = expired.
 export type PendingDepositState = "completed" | "pending" | "expired";
 
-export async function getPendingDepositState(
-  referenceCode: string,
+async function pendingDepositState(
+  path: string,
+  method: "GET" | "POST",
   token: string,
 ): Promise<PendingDepositState> {
   try {
-    await request(
-      `/api/savings/confirm-deposit/${encodeURIComponent(referenceCode)}`,
-      { token },
-    );
+    await request(path, { method, token });
     return "completed";
   } catch (err) {
     if (err instanceof ApiError) {
@@ -563,6 +577,24 @@ export async function getPendingDepositState(
     }
     throw err;
   }
+}
+
+export function getPendingDepositState(referenceCode: string, token: string) {
+  return pendingDepositState(
+    `/api/savings/confirm-deposit/${encodeURIComponent(referenceCode)}`,
+    "GET",
+    token,
+  );
+}
+
+// "I've made the payment": if the transfer already landed in the wallet before this request existed, the
+// server moves exactly that amount from the wallet into the plan. Only ever called from the button, never polled.
+export function claimPendingDeposit(referenceCode: string, token: string) {
+  return pendingDepositState(
+    `/api/savings/claim-deposit/${encodeURIComponent(referenceCode)}`,
+    "POST",
+    token,
+  );
 }
 
 // Withdrawals aren't supported for BNPL by the backend (SavingsWithdrawDto only accepts the
@@ -804,4 +836,83 @@ export function addFundsToSmartLock(
     method: "POST",
     token,
   });
+}
+
+// ---- KYC (identity verification) ------------------------------------------------------------
+// Four steps, done in order: a live selfie, the NIN, an ID document (its face is compared with the
+// selfie) and the home address. The backend keeps the selfie itself and uses its own copy for the
+// comparisons, so a photo is only ever sent once. A step that Prembly rejects comes back as a
+// "failed" response, which `request` throws as an ApiError carrying the customer-safe message.
+export type KycStepName = "LIVENESS" | "NIN" | "DOCUMENT" | "ADDRESS";
+export type KycStepState = {
+  step: KycStepName;
+  status: "NOT_STARTED" | "SUBMITTED" | "PENDING" | "VERIFIED" | "FAILED" | "ERROR";
+  message: string | null;
+  attemptsLeft: number;
+  canStart: boolean;
+};
+export type KycStatus = {
+  steps: KycStepState[];
+  nextStep: KycStepName | null;
+  tier: 1 | 2 | 3;
+  bankOne: { tier2: string; tier3: string };
+  ninMasked?: string;
+};
+export type KycStepResult = { step: string; status: string; passed: boolean };
+
+export function getKycStatus(token: string) {
+  return request<KycStatus>("/api/kyc/status", { token });
+}
+
+// `meta` says which actions the guided check asked for (blink, turn left ...) and how long it took; it is kept on
+// the record so staff can see it. Older callers may leave it out.
+export function submitKycLiveness(
+  image: string,
+  token: string,
+  meta?: { challenges: string[]; durationMs: number },
+) {
+  return request<KycStepResult>("/api/kyc/liveness", {
+    method: "POST",
+    body: { image, ...(meta ? { challenges: meta.challenges, durationMs: meta.durationMs } : {}) },
+    token,
+  });
+}
+
+export function submitKycNin(nin: string, token: string) {
+  return request<KycStepResult>("/api/kyc/nin", { method: "POST", body: { nin }, token });
+}
+
+export function submitKycDocument(docType: "ID" | "DL" | "PP", image: string, token: string) {
+  return request<KycStepResult>("/api/kyc/document", { method: "POST", body: { docType, image }, token });
+}
+
+export type KycAddressPayload = {
+  houseNumber: string;
+  street: string;
+  city: string;
+  state: string;
+  lga: string;
+  landmark: string;
+};
+
+export function submitKycAddress(payload: KycAddressPayload, token: string) {
+  return request<KycStepResult>("/api/kyc/address", { method: "POST", body: payload, token });
+}
+
+export function refreshKycAddress(token: string) {
+  return request<KycStepResult>("/api/kyc/address/refresh", { method: "POST", token });
+}
+
+// A new plan needs the customer's identity verified (the ID step of KYC) and a withdrawal bank account saved.
+// The backend enforces it on every create endpoint; this is what the screens use to show what is missing.
+export type InvestmentEligibility = {
+  required: boolean;
+  identityVerified: boolean;
+  bankSet: boolean;
+  eligible: boolean;
+  missing: ("IDENTITY" | "BANK_ACCOUNT")[];
+};
+
+export function getInvestmentEligibility(token: string) {
+  return request<InvestmentEligibility>("/api/kyc/eligibility", { token });
 }

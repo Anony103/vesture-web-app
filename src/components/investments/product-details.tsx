@@ -1,6 +1,9 @@
 "use client";
 import Link from "next/link";
-import { LinkButton } from "@/components/ui/button";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { BNPL_MIN_INITIAL_PAYMENT } from "@/lib/api";
 import { useCurrentUser } from "@/components/auth/auth-guard";
 import {
@@ -13,6 +16,7 @@ import { ProductArt } from "./product-art";
 import { InvestmentIcon } from "./investment-icon";
 import { Callout } from "./callout";
 import { formatRateRange, usePublicRates } from "./use-public-rates";
+import { SetupChecklist, useInvestmentEligibility } from "./setup-checklist";
 export function BenefitsList({ items }: { items: string[] }) {
   return (
     <ul className="space-y-2.5">
@@ -50,6 +54,12 @@ export function KeyDetail({
 }
 export function ProductDetails({ product }: { product: Product }) {
   const { user } = useCurrentUser();
+  const router = useRouter();
+  // Every plan and Buy Now Pay Later needs identity verified and a withdrawal bank saved first. Starting one without
+  // them opens a modal that sends the customer to finish; the backend refuses the purchase in any case.
+  const eligibility = useInvestmentEligibility();
+  const blocked = eligibility !== null && !eligibility.eligible;
+  const [setupOpen, setSetupOpen] = useState(false);
   const rateRange = usePublicRates(product.id);
   return (
     <div className="mx-auto max-w-[800px]">
@@ -122,14 +132,23 @@ export function ProductDetails({ product }: { product: Product }) {
             Early liquidation may attract adjusted returns and/or charges.
           </Callout>
         )}
-        <LinkButton
-          href={`/investments/${product.id}/create`}
+        <Button
           fullWidth
           size="lg"
           variant={product.id === "smallvest" ? "primary" : "login"}
+          onClick={() => (blocked ? setSetupOpen(true) : router.push(`/investments/${product.id}/create`))}
         >
           {product.id === "bnpl" ? "Browse Items" : `Start ${product.name}`}
-        </LinkButton>
+        </Button>
+        <Modal open={setupOpen} onClose={() => setSetupOpen(false)} title="Complete your setup to invest">
+          <p className="mb-4 text-sm text-subtle">
+            Two quick steps first. Your bank account is where your money is paid when a plan is liquidated.
+          </p>
+          {eligibility && <SetupChecklist status={eligibility} heading={false} />}
+          <Button variant="secondary" fullWidth className="mt-4" onClick={() => setSetupOpen(false)}>
+            Not now
+          </Button>
+        </Modal>
       </div>
     </div>
   );

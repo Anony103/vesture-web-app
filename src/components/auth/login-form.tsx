@@ -99,10 +99,10 @@ export function LoginForm() {
           {submitting ? "Signing in…" : "Log In"}
         </Button>
       </form>
-      <div className="mt-6">
+      {/* <div className="mt-6">
         <Divider />
-      </div>
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      </div> */}
+      {/* <div className="mt-6 grid grid-cols-2 gap-3">
         {(["google", "facebook"] as const).map((provider) => (
           <Button
             key={provider}
@@ -119,7 +119,7 @@ export function LoginForm() {
             {provider === "google" ? "Google" : "Facebook"}
           </Button>
         ))}
-      </div>
+      </div> */}
       {message && (
         <div className="mt-5">
           <Notice tone={tone}>{message}</Notice>

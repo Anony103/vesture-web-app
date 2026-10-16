@@ -79,7 +79,8 @@ test("registration validates input, supports editing and completes the preview",
   await page.getByLabel("Gender").selectOption("Female");
   await page.getByLabel("Date of Birth").fill("1994-04-20");
   await page.getByLabel("State of Origin").selectOption("Lagos");
-  await page.getByLabel("Home Address").fill("12 Example Street");
+  // Home address is no longer asked at sign-up (it is collected in KYC after sign-up).
+  await expect(page.getByLabel("Home Address")).toHaveCount(0);
   await page.getByLabel("Phone Number").fill("08012345678");
   await noOverflow(page);
   await page.screenshot({
@@ -98,25 +99,13 @@ test("registration validates input, supports editing and completes the preview",
   );
   await page.getByLabel("Digit 1", { exact: true }).fill("1234");
   await page.getByRole("button", { name: "Verify Account" }).click();
-  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
-  await page.getByLabel("Upload identity document").setInputFiles({
-    name: "invalid.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("test"),
-  });
-  await expect(page.locator("main").getByRole("alert")).toContainText(
-    "JPG, PNG, or PDF",
-  );
-  await page.getByLabel("Upload identity document").setInputFiles({
-    name: "staff-id.pdf",
-    mimeType: "application/pdf",
-    buffer: Buffer.from("%PDF-1.4\n%%EOF"),
-  });
+  // The identity-document upload step is switched off: verifying goes straight to the review screen.
+  // await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
+  // await page.getByLabel("Upload identity document").setInputFiles({ ... });   // (identity step)
   await page.screenshot({
     path: testInfo.outputPath("step-" + page.url().split("/").pop() + ".png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText("Ada Okafor", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Confirm", exact: true }),

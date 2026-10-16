@@ -11,10 +11,12 @@ function SettingsRow({
   href,
   label,
   danger = false,
+  icon,
 }: {
   href: string;
   label: string;
   danger?: boolean;
+  icon?: string;
 }) {
   return (
     <Link
@@ -23,7 +25,7 @@ function SettingsRow({
     >
       <span className="flex items-center gap-3">
         <img
-          src={`/figma/settings/${href.split("/").pop() === "personal" ? "person" : href.split("/").pop() === "close-account" ? "delete" : href.split("/").pop()}.png`}
+          src={`/figma/settings/${icon ?? (href.split("/").pop() === "personal" ? "person" : href.split("/").pop() === "close-account" ? "delete" : href.split("/").pop())}.png`}
           alt=""
           width={36}
           height={36}
@@ -80,6 +82,7 @@ export function SettingsHome() {
       <div className="mx-auto max-w-[680px] space-y-5 px-5 py-8">
         <SettingsGroup title="Account settings">
           <SettingsRow href="/settings/personal" label="Personal information" />
+          <SettingsRow href="/settings/verification" label="Verify your identity" icon="pin" />
           <SettingsRow href="/settings/bank" label="Bank Account" />
         </SettingsGroup>
         <SettingsGroup title="Security">

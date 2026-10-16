@@ -156,6 +156,13 @@ export function frequencyCode(
 export function getProduct(id: string) {
   return products.find((product) => product.id === id);
 }
+// The backend writes its internal product names into transaction text ("Deposit to Save Small Small");
+// customers know them as SmallVest and Target Lock.
+export function productDisplayText(text: string) {
+  return text
+    .replace(/save small small/gi, "SmallVest")
+    .replace(/target savings/gi, "Target Lock");
+}
 export function currency(amount: number, fractionDigits = 0) {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
@@ -206,6 +213,13 @@ export type DemoPlan = {
   // Smart Lock created for a bank transfer whose money hasn't landed yet. It has no balance and
   // can't be withdrawn from or topped up; the backend deletes it if the transfer never arrives.
   awaitingFunding?: boolean;
+  // Paid for, but still on its way into the fixed deposit: "Funding in progress" (money moving to the bank)
+  // or "Setting up your deposit" (the deposit is being booked). Not yet active, so it can't be withdrawn from.
+  settingUp?: string;
+  // Fully withdrawn: the investment is closed and takes no more money; a new one has to be created.
+  closed?: boolean;
+  // A Smart Lock paid in part from the wallet, still building up to the minimum (money in it, no transfer awaited).
+  partFunded?: boolean;
   // For an awaiting-funding Smart Lock: the amount the customer has to transfer.
   fundingAmount?: number;
   // The amount the plan was created for (Target Lock: the goal; Smart Lock: the lock amount;

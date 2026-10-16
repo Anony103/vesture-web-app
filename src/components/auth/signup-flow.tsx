@@ -7,7 +7,7 @@ import { useOnboarding } from "./onboarding-provider";
 import { AccountTypeForm } from "./account-type-form";
 import { DetailsForm } from "./details-form";
 import { VerifyForm } from "./verify-form";
-import { IdentityForm } from "./identity-form";
+// import { IdentityForm } from "./identity-form";   // identity upload step switched off
 import { ReviewForm } from "./review-form";
 import { CreatePasswordForm } from "./create-password-form";
 import { CompletionCard } from "./completion-card";
@@ -15,13 +15,13 @@ const screens = {
   "account-type": AccountTypeForm,
   details: DetailsForm,
   verify: VerifyForm,
-  identity: IdentityForm,
+  // identity: IdentityForm,   // identity upload step switched off
   review: ReviewForm,
   password: CreatePasswordForm,
   complete: CompletionCard,
 };
 export function SignupFlow({ step }: { step: SignupStep }) {
-  const { accountType, profile, verified, identity, consent } = useOnboarding();
+  const { accountType, profile, verified, consent } = useOnboarding();   // identity: no longer a step
   const router = useRouter();
   const index = steps.indexOf(step);
   const redirect =
@@ -31,11 +31,10 @@ export function SignupFlow({ step }: { step: SignupStep }) {
         ? "details"
         : index > 2 && !verified
           ? "verify"
-          : index > 3 && !identity
-            ? "identity"
-            : index > 4 && !consent
-              ? "review"
-              : null;
+          : // index > 3 && !identity ? "identity" :   // identity upload step switched off
+            index > 3 && !consent
+            ? "review"
+            : null;
   useEffect(() => {
     if (redirect) router.replace(`/signup/${redirect}`);
   }, [redirect, router]);

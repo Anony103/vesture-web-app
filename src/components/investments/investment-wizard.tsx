@@ -1,7 +1,8 @@
 "use client";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LinkButton } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
+import { PageHeading } from "@/components/workspace/page-heading";
 import {
   calculatePreview,
   completionDateFor,
@@ -28,6 +29,7 @@ import { InvestmentReview } from "./investment-review";
 import { FundingStep, type FundingChoice } from "./funding-step";
 import { TransactionAuthStep } from "./transaction-auth-step";
 import { TransferInstructions, type PendingTransfer } from "./transfer-instructions";
+import { SetupChecklist, useInvestmentEligibility } from "./setup-checklist";
 import {
   ApiError,
   createPendingDeposit,
@@ -47,7 +49,28 @@ type Step =
   | "review"
   | "funding"
   | "authorize"
+  | "setup"
   | "success";
+
+// The plan being filled in is kept for the tab, so a customer who leaves to verify their identity or add a bank
+// account finds it as they left it.
+const draftKey = (productId: string) => `vesture.investmentDraft.${productId}`;
+function loadDraft(productId: string): InvestmentDraft {
+  try {
+    const saved = sessionStorage.getItem(draftKey(productId));
+    return saved ? { ...defaultDraft(), ...(JSON.parse(saved) as Partial<InvestmentDraft>) } : defaultDraft();
+  } catch {
+    return defaultDraft();
+  }
+}
+function saveDraft(productId: string, draft: InvestmentDraft | null) {
+  try {
+    if (draft) sessionStorage.setItem(draftKey(productId), JSON.stringify(draft));
+    else sessionStorage.removeItem(draftKey(productId));
+  } catch {
+    // storage unavailable: the plan simply starts blank next time
+  }
+}
 
 export function InvestmentWizard({ product }: { product: Product }) {
   const router = useRouter();
@@ -56,7 +79,10 @@ export function InvestmentWizard({ product }: { product: Product }) {
   const [step, setStep] = useState<Step>(
     product.id === "bnpl" ? "catalog" : "configure",
   );
-  const [draft, setDraft] = useState<InvestmentDraft>(defaultDraft);
+  const [draft, setDraft] = useState<InvestmentDraft>(() => (product.id === "bnpl" ? defaultDraft() : loadDraft(product.id)));
+  // Filling in a plan is open to everyone; what is needed before paying for it is identity + a withdrawal bank account.
+  const eligibility = useInvestmentEligibility();
+  const needsSetup = eligibility !== null && !eligibility.eligible;
   const [bnplDraft, setBnplDraft] = useState<BnplDraft>(emptyBnplDraft);
   const [funding, setFunding] = useState<FundingChoice>("WALLET");
   const [transfer, setTransfer] = useState<PendingTransfer | null>(null);
@@ -93,6 +119,7 @@ export function InvestmentWizard({ product }: { product: Product }) {
         token,
       );
       completed.current = true;
+      saveDraft(product.id, null);
       await Promise.all([refresh(), refreshUser()]);
       go("success");
       return;
@@ -190,10 +217,14 @@ export function InvestmentWizard({ product }: { product: Product }) {
     }
 
     completed.current = true;
+    saveDraft(product.id, null);
     await Promise.all([refresh(), refreshUser()]);
     go("success");
   }
-  const cancel = () => router.push(`/investments/${product.id}`);
+  const cancel = () => {
+    saveDraft(product.id, null);
+    router.push(`/investments/${product.id}`);
+  };
   return (
     <div
       className={`mx-auto px-5 pt-10 pb-8 ${step === "catalog" ? "max-w-[1120px]" : "max-w-[680px]"}`}
@@ -229,8 +260,20 @@ export function InvestmentWizard({ product }: { product: Product }) {
           draft={bnplDraft}
           onBack={() => go("configure")}
           onCancel={cancel}
-          onContinue={() => go("funding")}
+          onContinue={() => go(needsSetup ? "setup" : "funding")}
         />
+      )}
+      {step === "setup" && eligibility && (
+        <div className="space-y-5">
+          <PageHeading title="One more thing before you pay" onBack={() => go("review")} />
+          <p className="text-sm text-subtle">
+            Your plan is ready. Finish these two steps and you can pay for it. We keep what you entered, so you can pick up where you left off.
+          </p>
+          <SetupChecklist status={eligibility} />
+          <Button variant="secondary" fullWidth onClick={() => go("review")}>
+            Back to my plan
+          </Button>
+        </div>
       )}
       {bnpl && step === "funding" && (
         <BnplWalletStep
@@ -243,7 +286,10 @@ export function InvestmentWizard({ product }: { product: Product }) {
         <InvestmentForm
           product={product}
           draft={draft}
-          onChange={setDraft}
+          onChange={(next) => {
+            setDraft(next);
+            saveDraft(product.id, next);
+          }}
           onContinue={() => go("review")}
           onBack={cancel}
         />
@@ -254,7 +300,7 @@ export function InvestmentWizard({ product }: { product: Product }) {
           draft={draft}
           onBack={() => go("configure")}
           onCancel={cancel}
-          onContinue={() => go("funding")}
+          onContinue={() => go(needsSetup ? "setup" : "funding")}
         />
       )}
       {!bnpl && step === "funding" && (

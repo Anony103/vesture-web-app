@@ -65,3 +65,15 @@ test("activity summaries exclude pending and cancelled entries", () => {
   assert.deepEqual(totals, { inflow: 110, outflow: 30, net: 80 });
   assert.deepEqual(transactionTotals([]), { inflow: 0, outflow: 0, net: 0 });
 });
+
+test("transaction text shows SmallVest and Target Lock instead of the backend's product names", async () => {
+  const { productDisplayText } = await import("../src/lib/investments.ts");
+  assert.equal(productDisplayText("Deposit to Save Small Small"), "Deposit to SmallVest");
+  assert.equal(productDisplayText("Deposit to Target Savings"), "Deposit to Target Lock");
+  assert.equal(
+    productDisplayText("Direct deposit to Save Small Small - Ref: PAY-SAV-1"),
+    "Direct deposit to SmallVest - Ref: PAY-SAV-1",
+  );
+  assert.equal(productDisplayText("Withdrawal from target savings to bank"), "Withdrawal from Target Lock to bank");
+  assert.equal(productDisplayText("wallet funding"), "wallet funding");
+});

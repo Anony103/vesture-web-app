@@ -9,6 +9,7 @@ import { Callout } from "./callout";
 import { currency } from "@/lib/investments";
 import {
   ApiError,
+  claimPendingDeposit,
   getPendingDepositState,
   getToken,
   getUserProducts,
@@ -45,7 +46,11 @@ export function TransferInstructions({ transfer }: { transfer: PendingTransfer }
     try {
       let next: State = "waiting";
       if (transfer.referenceCode) {
-        const result = await getPendingDepositState(transfer.referenceCode, token);
+        // The button also looks for money that reached the wallet before this request existed; the
+        // background poll only reads the status and never moves money.
+        const result = manual
+          ? await claimPendingDeposit(transfer.referenceCode, token)
+          : await getPendingDepositState(transfer.referenceCode, token);
         next = result === "pending" ? "waiting" : result;
       } else if (transfer.smartLockId) {
         const products = (await getUserProducts(token)).data;
@@ -59,7 +64,7 @@ export function TransferInstructions({ transfer }: { transfer: PendingTransfer }
       setError("");
       setNotice(
         manual && next === "waiting"
-          ? "We haven't received your transfer yet. This page keeps checking automatically."
+          ? `We haven't found a payment of ${currency(transfer.amount)} yet. If you've already sent it, give it a few minutes - this page keeps checking automatically.`
           : "",
       );
       if (next !== "waiting") {

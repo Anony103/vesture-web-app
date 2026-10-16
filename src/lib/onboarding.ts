@@ -8,7 +8,7 @@ export type Profile = {
   gender: string;
   dateOfBirth: string;
   stateOfOrigin: string;
-  address: string;
+  // No home address at sign-up: it is collected and verified later, in KYC (Settings > Verify your identity).
   phone: string;
 };
 export const emptyProfile: Profile = {
@@ -20,14 +20,15 @@ export const emptyProfile: Profile = {
   gender: "",
   dateOfBirth: "",
   stateOfOrigin: "",
-  address: "",
   phone: "",
 };
 export const steps = [
   "account-type",
   "details",
   "verify",
-  "identity",
+  // "identity",   // The identity-document upload step is not needed for sign-up. The screen is kept in
+  //                  components/auth/identity-form.tsx: put "identity" back here (between "verify" and
+  //                  "review"), and in signup-flow.tsx, to switch it on again.
   "review",
   "password",
   "complete",

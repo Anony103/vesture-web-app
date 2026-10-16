@@ -33,7 +33,7 @@ export function VerifyForm() {
           // /auth/complete-signup, not here - this screen only collects it, matching
           // PublicVerifyAccountScreen/VerifyAccountScreen in the mobile app.
           setVerified(true);
-          router.push("/signup/identity");
+          router.push("/signup/review");   // was "/signup/identity" - that step is switched off
         }}
       >
         <p

@@ -183,6 +183,9 @@ export function ActivePlanDetails({ id }: { id: string }) {
   const bnpl = current.bnpl;
   const smartLock = current.productId === "smart-lock";
   const awaiting = !!current.awaitingFunding;
+  const settingUp = current.settingUp;
+  const closed = !!current.closed;
+  const partFunded = !!current.partFunded;
   const savingsType = PRODUCT_TO_SAVINGS_TYPE[current.productId];
   const targetLabel =
     current.productId === "target-lock"
@@ -343,6 +346,10 @@ export function ActivePlanDetails({ id }: { id: string }) {
             label: "Status",
             value: awaiting ? (
               <span className="text-amber-300">Awaiting funding</span>
+            ) : settingUp ? (
+              <span className="text-amber-300">{settingUp}</span>
+            ) : closed ? (
+              <span className="text-subtle">Closed</span>
             ) : bnpl?.completed ? (
               <span>Completed</span>
             ) : (
@@ -375,7 +382,19 @@ export function ActivePlanDetails({ id }: { id: string }) {
         ]}
       />
 
-      {awaiting && smartLock && (
+      {awaiting && smartLock && partFunded && (
+        <>
+          <Callout title="Add funds to start your Smart Lock">
+            You have put {currency(current.amount)} into this Smart Lock. It starts once it holds at
+            least {currency(50000)}, so add {currency(Math.max(0, 50000 - current.amount))} more from
+            your wallet.
+          </Callout>
+          <Button fullWidth onClick={() => open("addfunds")}>
+            Add funds
+          </Button>
+        </>
+      )}
+      {awaiting && smartLock && !partFunded && (
         <>
           <Callout title="Waiting for your transfer">
             Transfer exactly {currency(current.fundingAmount ?? 0)} to your account below. This
@@ -407,7 +426,20 @@ export function ActivePlanDetails({ id }: { id: string }) {
         <Callout title="Fully paid">This item is paid off. Thank you.</Callout>
       )}
 
-      {!awaiting && !bnpl && (
+      {settingUp && !bnpl && (
+        <Callout title="Your investment is being set up">
+          Your payment has been received and is being moved into your fixed deposit. This usually takes
+          a few minutes. You can withdraw once the plan is active.
+        </Callout>
+      )}
+
+      {closed && !bnpl && (
+        <Callout title="This investment is closed">
+          It has been fully withdrawn and cannot take more money. Create a new investment to save again.
+        </Callout>
+      )}
+
+      {!awaiting && !settingUp && !closed && !bnpl && (
         <>
           <Callout title="Withdrawal Information">
             {smartLock
