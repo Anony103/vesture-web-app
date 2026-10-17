@@ -9,7 +9,6 @@ import {
   type SavingsPreview,
 } from "@/lib/api";
 import {
-  calculatePreview,
   completionDateFor,
   frequencyCode,
   interestPaymentCode,
@@ -19,10 +18,9 @@ import {
 } from "@/lib/investments";
 
 export type SavingsQuote = {
-  // "backend" = the rate and interest come from the backend's own preview for this plan;
-  // "estimate" = the preview was unavailable (or no rate is configured) so this is an
-  // illustration using the product's indicative rate.
-  source: "backend" | "estimate";
+  // Always the backend's own preview for this plan: there is no made-up "indicative" rate any more. If the backend
+  // cannot confirm a rate the customer cannot go on (see `unavailable`).
+  source: "backend";
   rate: number;
   grossInterest: number;
   withholding: number;
@@ -50,8 +48,9 @@ function fromPreview(
   preview: SavingsPreview,
 ): SavingsQuote | null {
   const principal = Number(draft.amount) || 0;
-  const rate = preview.assignedInterestRate ?? 0;
-  if (rate <= 0) return null;
+  if (preview.assignedInterestRate == null) return null;
+  // A rate an admin set to 0% on purpose is a real rate; a missing one is refused by the backend before it gets here.
+  const rate = preview.assignedInterestRate;
   if (product.id === "smart-lock") {
     const withholding = preview.withholdingTax ?? 0;
     const gross = (preview.expectedInterestAmount ?? 0) + withholding;
@@ -68,29 +67,23 @@ function fromPreview(
 export function useSavingsQuote(product: Product, draft: InvestmentDraft) {
   const [quote, setQuote] = useState<SavingsQuote | null>(null);
   const [loading, setLoading] = useState(true);
+  // True when the backend could not confirm an interest rate for this plan (none is set, or it could not be asked).
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const token = getToken();
-    const fallback = (): SavingsQuote => {
-      const local = calculatePreview(product, draft);
-      return {
-        source: "estimate",
-        rate: product.rate,
-        grossInterest: local.grossInterest,
-        withholding: local.withholding,
-        total: local.total,
-      };
-    };
     async function run() {
+      setUnavailable(false);
       if (!token || product.id === "bnpl") {
-        setQuote(fallback());
+        setQuote(null);
+        setUnavailable(product.id !== "bnpl");
         setLoading(false);
         return;
       }
       try {
         const productId = await resolveProductId(product, token);
-        if (!productId) return setQuote(fallback());
+        if (!productId) throw new Error("unknown product");
         const base = {
           productId,
           name: draft.goal.trim() || product.name,
@@ -116,13 +109,19 @@ export function useSavingsQuote(product: Product, draft: InvestmentDraft) {
                   { ...base, tenor: draft.months, completionDate: `${date}T00:00:00`, frequency },
                   token,
                 );
-        if (!cancelled) setQuote(fromPreview(product, draft, response.data) ?? fallback());
+        const confirmed = fromPreview(product, draft, response.data);
+        if (cancelled) return;
+        setQuote(confirmed);
+        setUnavailable(confirmed === null);
       } catch {
-        if (!cancelled) setQuote(fallback());
+        if (cancelled) return;
+        setQuote(null);
+        setUnavailable(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
+    setLoading(true);
     run();
     return () => {
       cancelled = true;
@@ -131,5 +130,5 @@ export function useSavingsQuote(product: Product, draft: InvestmentDraft) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id, draft.amount, draft.months, draft.frequency, draft.payout]);
 
-  return { quote, loading };
+  return { quote, loading, unavailable };
 }

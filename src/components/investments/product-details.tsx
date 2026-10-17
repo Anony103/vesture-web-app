@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { Notice } from "@/components/ui/notice";
 import { BNPL_MIN_INITIAL_PAYMENT } from "@/lib/api";
 import { useCurrentUser } from "@/components/auth/auth-guard";
 import {
@@ -60,7 +61,9 @@ export function ProductDetails({ product }: { product: Product }) {
   const eligibility = useInvestmentEligibility();
   const blocked = eligibility !== null && !eligibility.eligible;
   const [setupOpen, setSetupOpen] = useState(false);
-  const rateRange = usePublicRates(product.id);
+  const { range: rateRange, status: rateStatus } = usePublicRates(product.id);
+  // Nobody can start a plan that has no interest rate to earn (the backend refuses it too).
+  const noRate = rateStatus === "none";
   return (
     <div className="mx-auto max-w-[800px]">
       <header
@@ -110,7 +113,7 @@ export function ProductDetails({ product }: { product: Product }) {
                 />
                 <KeyDetail
                   label="Current Rate"
-                  value={formatRateRange(rateRange)}
+                  value={formatRateRange(rateRange, rateStatus)}
                   positive
                 />
               </>
@@ -132,10 +135,16 @@ export function ProductDetails({ product }: { product: Product }) {
             Early liquidation may attract adjusted returns and/or charges.
           </Callout>
         )}
+        {noRate && product.id !== "bnpl" && (
+          <Notice tone="error">
+            {product.name} is not open right now because its interest rate has not been set. Please check back soon.
+          </Notice>
+        )}
         <Button
           fullWidth
           size="lg"
           variant={product.id === "smallvest" ? "primary" : "login"}
+          disabled={noRate && product.id !== "bnpl"}
           onClick={() => (blocked ? setSetupOpen(true) : router.push(`/investments/${product.id}/create`))}
         >
           {product.id === "bnpl" ? "Browse Items" : `Start ${product.name}`}

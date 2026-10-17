@@ -110,21 +110,26 @@ export function InvestmentForm({
                 value={draft.payout}
                 onChange={(event) => change("payout", event.target.value)}
               />
-            ) : (
-            <section className="space-y-3">
-              <h2 className="text-sm font-medium">Set contribution details</h2>
-              <p className="text-xs text-subtle">How often do you plan to contribute?</p>
-              <Select
-                label="Contribution frequency"
-                name="frequency"
-                variant="filled"
-                placeholder="Choose frequency"
-                options={["Daily", "Weekly", "Monthly"]}
-                value={draft.frequency}
-                onChange={(event) => change("frequency", event.target.value)}
-              />
-            </section>
-            )}
+            ) : null}
+            {/* Contribution details for Target Lock are switched off for now. Target Lock still sends the default
+                frequency ("Daily"), which the backend needs to split the target into per-period amounts.
+                To bring the section back, restore this block (it was shown only for Target Lock, with
+                `const targetLock = product.id === "target-lock";` and a `: targetLock ? (...)` arm after Smart Lock):
+
+                <section className="space-y-3">
+                  <h2 className="text-sm font-medium">Set contribution details</h2>
+                  <p className="text-xs text-subtle">How often do you plan to contribute?</p>
+                  <Select
+                    label="Contribution frequency"
+                    name="frequency"
+                    variant="filled"
+                    placeholder="Choose frequency"
+                    options={["Daily", "Weekly", "Monthly"]}
+                    value={draft.frequency}
+                    onChange={(event) => change("frequency", event.target.value)}
+                  />
+                </section>
+            */}
           </>
         <Button
           type="submit"
